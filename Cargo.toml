@@ -1,13 +1,12 @@
 [package]
 name = "sbus_dump"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 
 [dependencies]
 cortex-m-rt = "0.7.0"
 
-defmt = "0.3.4"
-defmt-rtt = "0.4"
+log = "0.4.27"
 
 embassy-embedded-hal = "0.1.0"
 embassy-executor = { version = "0.5.0", features = [
@@ -19,9 +18,12 @@ embassy-executor = { version = "0.5.0", features = [
 embassy-rp = { version = "0.1.0", features = [
   "critical-section-impl",
   "time-driver",
-  "defmt",
 ] }
 embassy-time = "0.3.1"
+embassy-usb = "0.4.0"
+embassy-usb-logger = "0.4.0"
+embassy-futures = "0.1.1"
 
-panic-probe = { version = "0.3", features = ["print-defmt"] }
+panic-probe = "1.0.0"
+
 sbus = { git = "https://github.com/peterkrull/sbus" }

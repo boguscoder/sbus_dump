@@ -1,25 +1,28 @@
 #![no_std]
 #![no_main]
 
+mod usb;
+
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
-use embassy_rp::peripherals::UART1;
+use embassy_rp::peripherals::UART0;
 use embassy_rp::uart::{Config, DataBits, InterruptHandler, Parity, StopBits};
 use embassy_time::{with_timeout, Duration, Instant};
-use {defmt_rtt as _, panic_probe as _};
+use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
-    UART1_IRQ => InterruptHandler<UART1>;
+    UART0_IRQ => InterruptHandler<UART0>;
 });
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
+    spawner.must_spawn(usb::usb_setup(p.USB));
 
     // rc via SBUS
-    let uart = p.UART1;
-    let rx = p.PIN_5;
-    let dma = p.DMA_CH1;
+    let uart = p.UART0;
+    let rx = p.PIN_29;
+    let dma = p.DMA_CH2;
 
     let mut sbus_uart_config = Config::default();
     sbus_uart_config.baudrate = 100_000;
@@ -29,7 +32,7 @@ async fn main(_spawner: Spawner) {
     sbus_uart_config.invert_rx = true;
 
     pub type UartRxSbusPeripheral =
-        embassy_rp::uart::UartRx<'static, UART1, embassy_rp::uart::Async>;
+        embassy_rp::uart::UartRx<'static, UART0, embassy_rp::uart::Async>;
 
     let mut uart_rx: UartRxSbusPeripheral =
         embassy_rp::uart::UartRx::new(uart, rx, Irqs, dma, sbus_uart_config);
@@ -46,17 +49,17 @@ async fn main(_spawner: Spawner) {
                 if let Some(packet) = sbusparser.try_parse() {
                     parse_time = Instant::now();
                     match packet.failsafe {
-                        false => defmt::info!("{}", packet.channels),
-                        true => defmt::error!("Failsafe"),
+                        false => log::info!("{:?}", packet.channels),
+                        true => log::error!("Failsafe"),
                     }
 
                 // Else if packet was not parsed, check if it took too long
                 } else if parse_time.elapsed() > timeout {
-                    defmt::error!("Parse timeout");
+                    log::error!("Parse timeout");
                 }
             }
-            Ok(Err(e)) => defmt::error!("Serial read {}", e),
-            Err(_) => defmt::error!("Serial timeout"),
+            Ok(Err(e)) => log::error!("Serial read {:?}", e),
+            Err(_) => log::error!("Serial timeout"),
         }
     }
 }

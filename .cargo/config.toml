@@ -3,6 +3,3 @@ runner = "elf2uf2-rs --deploy --serial"
 
 [build]
 target = "thumbv6m-none-eabi"        # Cortex-M0 and Cortex-M0+
-
-[env]
-DEFMT_LOG = "debug"
