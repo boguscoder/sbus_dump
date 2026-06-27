@@ -3,6 +3,9 @@ name = "sbus_dump"
 version = "0.2.0"
 edition = "2024"
 
+[features]
+feather = []
+
 [dependencies]
 cortex-m-rt = "0.7.0"
 
