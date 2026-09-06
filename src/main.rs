@@ -1,29 +1,25 @@
 #![no_std]
 #![no_main]
 
-mod usb;
-
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
-use embassy_rp::peripherals::UART1;
+use embassy_rp::peripherals::{DMA_CH1, UART1};
 use embassy_rp::uart::{Config, DataBits, InterruptHandler, Parity, StopBits};
 use embassy_time::{Duration, Instant, with_timeout};
 use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
     UART1_IRQ => InterruptHandler<UART1>;
+    DMA_IRQ_0 => embassy_rp::dma::InterruptHandler<DMA_CH1>;
 });
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
-    spawner.must_spawn(usb::usb_setup(p.USB));
+    spawner.spawn(usb_console::usb_setup(p.USB, Default::default()).unwrap());
 
     let uart = p.UART1;
     let dma = p.DMA_CH1;
-    #[cfg(feature = "feather")]
-    let rx = p.PIN_9;
-    #[cfg(not(feature = "feather"))]
     let rx = p.PIN_5;
 
     let mut sbus_uart_config = Config::default();
@@ -33,8 +29,7 @@ async fn main(spawner: Spawner) {
     sbus_uart_config.parity = Parity::ParityEven;
     sbus_uart_config.invert_rx = true;
 
-    pub type UartRxSbusPeripheral =
-        embassy_rp::uart::UartRx<'static, UART1, embassy_rp::uart::Async>;
+    pub type UartRxSbusPeripheral = embassy_rp::uart::UartRx<'static, embassy_rp::uart::Async>;
 
     let mut uart_rx: UartRxSbusPeripheral =
         embassy_rp::uart::UartRx::new(uart, rx, Irqs, dma, sbus_uart_config);
